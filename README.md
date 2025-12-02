@@ -1,64 +1,285 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# وبلاگ لاراول - راهنمای سریع
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 🚀 شروع فوری
+```bash
+composer create-project laravel/laravel blog
+cd blog
+php artisan serve
+```
 
-## About Laravel
+## 📁 ساختار اصلی
+```
+app/
+├── Models/
+│   ├── Post.php
+│   ├── Category.php
+│   └── Comment.php
+├── Http/
+│   ├── Controllers/
+│   │   ├── PostController.php
+│   │   ├── CategoryController.php
+│   │   └── Admin/
+│   └── ...
+resources/
+├── views/
+│   ├── posts/
+│   ├── admin/
+│   └── layouts/
+database/
+├── migrations/
+└── ...
+```
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🔧 مدل‌های اصلی
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### پست (Post)
+```php
+// ایجاد مدل و مایگریشن
+php artisan make:model Post -mcr
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+// مدل Post
+protected $fillable = ['title', 'content', 'user_id', 'category_id', 'slug'];
+public function user() { return $this->belongsTo(User::class); }
+public function category() { return $this->belongsTo(Category::class); }
+public function comments() { return $this->hasMany(Comment::class); }
+```
 
-## Learning Laravel
+### دسته‌بندی (Category)
+```php
+php artisan make:model Category -mcr
+// مدل Category
+protected $fillable = ['name', 'slug'];
+public function posts() { return $this->hasMany(Post::class); }
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### نظر (Comment)
+```php
+php artisan make:model Comment -mcr
+// مدل Comment
+protected $fillable = ['content', 'post_id', 'user_id'];
+public function post() { return $this->belongsTo(Post::class); }
+public function user() { return $this->belongsTo(User::class); }
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🗃️ مایگریشن‌های اصلی
 
-## Laravel Sponsors
+### پست‌ها
+```php
+Schema::create('posts', function (Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->string('slug')->unique();
+    $table->text('content');
+    $table->foreignId('user_id')->constrained();
+    $table->foreignId('category_id')->nullable()->constrained();
+    $table->timestamps();
+});
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+### دسته‌بندی‌ها
+```php
+Schema::create('categories', function (Blueprint $table) {
+    $table->id();
+    $table->string('name');
+    $table->string('slug')->unique();
+    $table->timestamps();
+});
+```
 
-### Premium Partners
+### نظرات
+```php
+Schema::create('comments', function (Blueprint $table) {
+    $table->id();
+    $table->text('content');
+    $table->foreignId('post_id')->constrained();
+    $table->foreignId('user_id')->constrained();
+    $table->timestamps();
+});
+```
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+## 🎮 کنترلرهای اصلی
 
-## Contributing
+### PostController
+```php
+php artisan make:controller PostController --resource
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+متدهای اصلی:
+```php
+public function index() {
+    $posts = Post::with('category')->latest()->paginate(10);
+    return view('posts.index', compact('posts'));
+}
 
-## Code of Conduct
+public function show(Post $post) {
+    return view('posts.show', compact('post'));
+}
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Admin/PostController
+```php
+php artisan make:controller Admin/PostController --resource --model=Post
+```
 
-## Security Vulnerabilities
+متدهای اصلی:
+```php
+public function index() {
+    $posts = Post::latest()->paginate(15);
+    return view('admin.posts.index', compact('posts'));
+}
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+public function create() {
+    $categories = Category::all();
+    return view('admin.posts.create', compact('categories'));
+}
 
-## License
+public function store(Request $request) {
+    $request->validate([
+        'title' => 'required|max:255',
+        'content' => 'required',
+        'category_id' => 'exists:categories,id'
+    ]);
+    
+    Post::create([
+        'title' => $request->title,
+        'content' => $request->content,
+        'category_id' => $request->category_id,
+        'user_id' => auth()->id(),
+        'slug' => Str::slug($request->title)
+    ]);
+    
+    return redirect()->route('admin.posts.index');
+}
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 🛣️ مسیرها (Routes)
+```php
+// web.php
+Route::get('/', [PostController::class, 'index'])->name('home');
+Route::get('/posts/{post}', [PostController::class, 'show'])->name('posts.show');
+
+// بخش مدیریت
+Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
+    Route::resource('posts', PostController::class);
+});
+```
+
+## 🎨 ویوهای اصلی
+
+### لایه اصلی (layouts/app.blade.php)
+```blade
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <title>@yield('title') - وبلاگ من</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <nav>
+        <a href="/">خانه</a>
+        @auth
+            <a href="/admin/posts">پنل مدیریت</a>
+        @endauth
+    </nav>
+    
+    <main>
+        @yield('content')
+    </main>
+</body>
+</html>
+```
+
+### لیست پست‌ها (posts/index.blade.php)
+```blade
+@extends('layouts.app')
+@section('content')
+    @foreach($posts as $post)
+        <article>
+            <h2>{{ $post->title }}</h2>
+            <p>{{ Str::limit($post->content, 100) }}</p>
+            <a href="{{ route('posts.show', $post) }}">ادامه مطلب</a>
+        </article>
+    @endforeach
+    {{ $posts->links() }}
+@endsection
+```
+
+## 🔐 احراز هویت
+```bash
+# نصب Breeze (برای احراز هویت)
+composer require laravel/breeze --dev
+php artisan breeze:install
+npm install && npm run dev
+```
+
+## 📦 پکیج‌های کاربردی
+```bash
+# برای آپلود فایل
+composer require intervention/image
+
+# برای سئو
+composer require artesaos/seotools
+
+# برای مدیریت فایل‌ها
+composer require spatie/laravel-medialibrary
+```
+
+## ⚡ نکات سریع
+1. **Seeder ایجاد کنید:**
+   ```bash
+   php artisan make:seeder PostSeeder
+   php artisan db:seed
+   ```
+
+2. **فضای ذخیره‌سازی:**
+   ```bash
+   php artisan storage:link
+   ```
+
+3. **کش‌گذاری:**
+   ```php
+   // در کنترلر
+   $posts = Cache::remember('posts', 3600, function () {
+       return Post::with('category')->latest()->paginate(10);
+   });
+   ```
+
+4. **جستجو:**
+   ```php
+   // در PostController
+   public function search(Request $request) {
+       $posts = Post::where('title', 'like', "%{$request->q}%")
+                   ->orWhere('content', 'like', "%{$request->q}%")
+                   ->paginate(10);
+       return view('posts.search', compact('posts'));
+   }
+   ```
+
+## 🚀 دیپلوی
+```bash
+# برای هاستینگ
+git push heroku master
+
+# یا برای cPanel
+composer install --optimize-autoloader --no-dev
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+## 📞 عیب‌یابی سریع
+```bash
+# پاک کردن کش
+php artisan cache:clear
+php artisan config:clear
+php artisan view:clear
+
+# بررسی مسیرها
+php artisan route:list
+
+# لاگ‌ها
+tail -f storage/logs/laravel.log
+```
+
+این خلاصه‌ای از ساخت یک وبلاگ ساده با لاراول است. می‌توانید آن را بر اساس نیاز خود توسعه دهید.
